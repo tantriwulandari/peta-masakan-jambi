@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Peta Bahan Masakan Khas Jambi (Graf Bipartit)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@400;600;700&display=swap">
+<style>
+:root{--ink:#2D1B69;--kunyit:#F2B72D;--krem:#FFF7E6;--cabai:#C8102E;--daun:#1F7A5A;--garis:#E7D9B8;color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:var(--krem);color:var(--ink);font-family:'Nunito',system-ui,sans-serif;font-size:16px;line-height:1.55}
+header{background:var(--ink);color:#fff;padding:28px 20px 30px}
+.wrap{max-width:1100px;margin:0 auto}
+h1{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:clamp(28px,5vw,44px);line-height:1.1;margin:0 0 8px;color:var(--kunyit)}
+header p{margin:0;max-width:62ch;color:#EDE7FF}
+main{padding:20px}
+.card{background:#fff;border:1px solid var(--garis);border-radius:16px;padding:16px;margin-bottom:16px}
+h2{font-family:'Baloo 2',system-ui,sans-serif;font-weight:700;font-size:22px;margin:0 0 10px}
+.stats{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.chip{background:#fff;border:1px solid var(--garis);border-radius:999px;padding:4px 14px;font-weight:700;font-size:14px}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-bottom:10px}
+.toolbar label{font-weight:700}
+select,textarea,button{font:inherit;color:var(--ink)}
+select{padding:6px 10px;border:2px solid var(--ink);border-radius:10px;background:#fff;max-width:100%}
+#hasil{flex:1 1 320px;margin:0;font-weight:700}
+#hasil.bad{color:var(--cabai)}
+.scroll{overflow-x:auto}
+#graf{display:block;width:100%;min-width:680px;height:auto}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:820px){.cols{grid-template-columns:1fr}}
+.row{display:grid;grid-template-columns:110px 1fr 22px;gap:8px;align-items:center;width:100%;border:0;background:none;padding:4px 6px;border-radius:8px;text-align:left;cursor:pointer}
+.row:hover,.row[aria-pressed=true]{background:#FFF1CC}
+.bar{height:12px;border-radius:6px;background:var(--kunyit)}
+.row[aria-pressed=true] .bar{background:var(--cabai)}
+.deg{font-weight:800;text-align:right}
+.kode{grid-column:2/4;font-size:12px;opacity:.75;margin-top:-4px}
+ul.plain{margin:0;padding-left:20px}
+textarea{width:100%;min-height:210px;padding:10px;border:2px solid var(--ink);border-radius:10px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.5}
+.btns{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+.btn{padding:8px 18px;border-radius:10px;border:2px solid var(--ink);background:var(--kunyit);font-weight:800;cursor:pointer}
+.btn.alt{background:#fff}
+#pesan{color:var(--cabai);font-weight:700;margin-top:8px}
+.catatan{font-size:14px;opacity:.85;margin:0 0 8px}
+footer{padding:8px 20px 28px;font-size:14px}
+:focus-visible{outline:3px solid var(--cabai);outline-offset:2px}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+<h1>Peta Bahan Masakan Khas Jambi</h1>
+<p>Graf bipartit yang menghubungkan menu dengan bahannya. Klik sebuah bahan untuk melihat menu mana yang gagal dibuat kalau bahan itu habis.</p>
+</div></header>
+<main><div class="wrap">
+<div class="stats" id="stats" aria-live="polite"></div>
+
+<section class="card" aria-labelledby="jgraf">
+<h2 id="jgraf">Graf menu dan bahan</h2>
+<div class="toolbar">
+<label for="pilih">Kalau bahan ini habis:</label>
+<select id="pilih"></select>
+<p id="hasil" aria-live="polite"></p>
+</div>
+<div class="scroll"><svg id="graf" role="img" aria-label="Graf bipartit: menu di kiri, bahan di kanan"></svg></div>
+</section>
+
+<div class="cols">
+<section class="card" aria-labelledby="jrank">
+<h2 id="jrank">Peringkat bahan</h2>
+<p class="catatan">Panjang batang dan angka adalah derajat simpul, yaitu jumlah menu yang memakai bahan itu.</p>
+<div id="rank"></div>
+</section>
+<section class="card" aria-labelledby="jmirip">
+<h2 id="jmirip">Menu yang paling mirip</h2>
+<p class="catatan">Dihitung dari jumlah bahan yang sama.</p>
+<ul class="plain" id="mirip"></ul>
+<h2 style="margin-top:16px">Bahan yang hanya dipakai satu menu</h2>
+<p id="unik" style="margin:0"></p>
+</section>
+</div>
+
+<section class="card" aria-labelledby="jdata" id="data-kartu">
+<h2 id="jdata">Data resep</h2>
+<p class="catatan">Satu menu per baris, dengan format: Nama menu: bahan 1, bahan 2, bahan 3. Ganti isinya dengan resep asli lalu tekan Hitung.</p>
+<label for="data" class="catatan" style="display:block">Daftar menu dan bahan</label>
+<textarea id="data" spellcheck="false"></textarea>
+<div class="btns">
+<button class="btn" id="hitung" type="button">Hitung dan gambar graf</button>
+<button class="btn alt" id="contoh" type="button">Kembalikan data contoh</button>
+</div>
+<div id="pesan" role="alert"></div>
+</section>
+</div></main>
+<footer><div class="wrap">Proyek Matematika Diskrit oleh Tantri Wulan Dari (F1E126018). Dosen pengampu: Ulfa Khaira, S.Komp., M.Kom. Data bawaan adalah resep contoh.</div></footer>
+
+<script>
+const NS="http://www.w3.org/2000/svg";
+const $=s=>document.querySelector(s);
+const PAL=["#C2410C","#6D28D9","#0F766E","#B45309","#0E7490","#1D4ED8","#4D7C0F","#BE185D","#7C2D12","#4338CA"];
+const SAMPLE=`Gulai Ikan Patin: Ikan patin, Santan, Cabai, Bawang merah, Bawang putih, Kunyit, Jahe, Lengkuas, Serai, Garam
+Gulai Tempoyak Patin: Ikan patin, Tempoyak, Cabai, Bawang merah, Bawang putih, Kunyit, Serai, Garam
+Pindang Patin: Ikan patin, Nanas, Cabai, Bawang merah, Bawang putih, Serai, Kunyit, Garam
+Nasi Gemuk: Beras, Santan, Bawang merah, Serai, Daun pandan, Garam
+Lempok Durian: Durian, Gula
+Sambal Tempoyak: Tempoyak, Cabai, Bawang merah, Garam
+Rendang Daging: Daging sapi, Santan, Cabai, Bawang merah, Bawang putih, Jahe, Lengkuas, Serai, Kunyit, Garam`;
+let S={menus:[],bahan:[],habis:null};
+
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+const short=(s,n)=>s.length>n?s.slice(0,n-1)+"…":s;
+function el(tag,attrs,txt){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(txt!=null)e.textContent=txt;return e}
+function h(tag,props,txt){const e=document.createElement(tag);Object.assign(e,props||{});if(txt!=null)e.textContent=txt;return e}
+
+function parse(text){
+  const menus=[],errors=[];
+  text.split("\n").forEach((ln,i)=>{
+    ln=ln.trim(); if(!ln)return;
+    const k=ln.indexOf(":");
+    if(k<1){errors.push("Baris "+(i+1)+": tulis dengan format Nama menu: bahan 1, bahan 2.");return}
+    const name=ln.slice(0,k).trim().replace(/\s+/g," ");
+    const seen=new Set(),items=[];
+    ln.slice(k+1).split(",").forEach(x=>{
+      const d=x.trim().replace(/\s+/g," "),key=d.toLowerCase();
+      if(d&&!seen.has(key)){seen.add(key);items.push({key:key,label:d})}
+    });
+    if(!items.length){errors.push("Baris "+(i+1)+": menu "+name+" belum punya bahan.");return}
+    menus.push({name:name,items:items});
+  });
+  return {menus:menus,errors:errors};
+}
+function build(menus){
+  const map=new Map();
+  menus.forEach((m,i)=>m.items.forEach(it=>{
+    if(!map.has(it.key))map.set(it.key,{key:it.key,name:cap(it.label),menus:[]});
+    map.get(it.key).menus.push(i);
+  }));
+  return [...map.values()].sort((a,b)=>b.menus.length-a.menus.length||a.name.localeCompare(b.name,"id"));
+}
+function bipartit(menus){
+  const adj=new Map(),add=(a,b)=>{if(!adj.has(a))adj.set(a,[]);adj.get(a).push(b)};
+  menus.forEach((m,i)=>m.items.forEach(it=>{add("m"+i,"b"+it.key);add("b"+it.key,"m"+i)}));
+  const warna=new Map();
+  for(const s of adj.keys()){
+    if(warna.has(s))continue;
+    warna.set(s,0);const q=[s];
+    while(q.length){
+      const u=q.shift();
+      for(const v of adj.get(u)){
+        if(!warna.has(v)){warna.set(v,1-warna.get(u));q.push(v)}
+        else if(warna.get(v)===warna.get(u))return false;
+      }
+    }
+  }
+  return true;
+}
+
+function drawStats(){
+  const sisi=S.menus.reduce((a,m)=>a+m.items.length,0);
+  const sb=S.bahan.reduce((a,b)=>a+b.menus.length,0);
+  const box=$("#stats");box.innerHTML="";
+  [S.menus.length+" menu",S.bahan.length+" bahan",sisi+" sisi",
+   "Bipartit: "+(bipartit(S.menus)?"ya":"tidak"),
+   "Jumlah derajat menu "+sisi+(sisi===sb?" = ":" ≠ ")+"bahan "+sb].forEach(t=>box.appendChild(h("span",{className:"chip"},t)));
+}
+function drawGraph(){
+  const {menus,bahan,habis}=S,svg=$("#graf");svg.innerHTML="";
+  const nm=menus.length,nb=bahan.length,H=Math.max(nb*28,nm*54)+40;
+  svg.setAttribute("viewBox","0 0 860 "+H);
+  const ym=i=>nm===1?H/2:30+i*(H-60)/(nm-1),yb=k=>nb===1?H/2:30+k*(H-60)/(nb-1);
+  const hb=habis?bahan.find(b=>b.key===habis):null,gagal=new Set(hb?hb.menus:[]);
+  const idx=new Map(bahan.map((b,k)=>[b.key,k]));
+  menus.forEach((m,i)=>m.items.forEach(it=>{
+    const kena=hb&&it.key===habis;
+    svg.appendChild(el("line",{x1:190,y1:ym(i),x2:650,y2:yb(idx.get(it.key)),stroke:kena?"#C8102E":PAL[i%PAL.length],"stroke-width":kena?3:1.4,opacity:hb?(kena?1:.12):.55}));
+  }));
+  menus.forEach((m,i)=>{
+    const bad=gagal.has(i),g=el("g",{});
+    g.appendChild(el("title",{},m.name));
+    g.appendChild(el("text",{x:172,y:ym(i)+4,"text-anchor":"end","font-size":13,"font-weight":700,fill:bad?"#C8102E":"#2D1B69"},short(m.name,24)));
+    g.appendChild(el("circle",{cx:190,cy:ym(i),r:14,fill:bad?"#C8102E":PAL[i%PAL.length]}));
+    g.appendChild(el("text",{x:190,y:ym(i)+4,"text-anchor":"middle","font-size":11,"font-weight":700,fill:"#fff"},"M"+(i+1)));
+    svg.appendChild(g);
+  });
+  bahan.forEach((b,k)=>{
+    const sel=habis===b.key;
+    const g=el("g",{tabindex:0,role:"button","aria-pressed":sel,"aria-label":b.name+", dipakai "+b.menus.length+" menu. Pilih sebagai bahan habis",style:"cursor:pointer"});
+    g.appendChild(el("circle",{cx:650,cy:yb(k),r:8,fill:sel?"#C8102E":"#F2B72D",stroke:"#2D1B69","stroke-width":1.5}));
+    g.appendChild(el("text",{x:666,y:yb(k)+4,"font-size":13,"font-weight":sel?800:600,fill:sel?"#C8102E":"#2D1B69"},short(b.name,22)+" ("+b.menus.length+")"));
+    g.addEventListener("click",()=>pick(sel?null:b.key));
+    g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();pick(sel?null:b.key)}});
+    svg.appendChild(g);
+  });
+}
+function drawRank(){
+  const box=$("#rank");box.innerHTML="";
+  const max=S.bahan[0].menus.length;
+  S.bahan.forEach(b=>{
+    const r=h("button",{className:"row",type:"button"});
+    r.setAttribute("aria-pressed",S.habis===b.key);
+    r.appendChild(h("span",{},b.name));
+    const bar=h("span",{className:"bar"});bar.style.width=(b.menus.length/max*100)+"%";
+    r.appendChild(bar);
+    r.appendChild(h("span",{className:"deg"},String(b.menus.length)));
+    r.appendChild(h("span",{className:"kode"},b.menus.map(i=>"M"+(i+1)).join(" ")));
+    r.addEventListener("click",()=>pick(S.habis===b.key?null:b.key));
+    box.appendChild(r);
+  });
+}
+function drawMirip(){
+  const ul=$("#mirip");ul.innerHTML="";
+  const pairs=[];
+  for(let i=0;i<S.menus.length;i++)for(let j=i+1;j<S.menus.length;j++){
+    const a=new Set(S.menus[i].items.map(x=>x.key));
+    const n=S.menus[j].items.filter(x=>a.has(x.key)).length;
+    if(n)pairs.push([i,j,n]);
+  }
+  pairs.sort((a,b)=>b[2]-a[2]);
+  if(!pairs.length)ul.appendChild(h("li",{},"Tidak ada menu yang berbagi bahan."));
+  pairs.slice(0,8).forEach(p=>ul.appendChild(h("li",{},"M"+(p[0]+1)+" "+S.menus[p[0]].name+" dan M"+(p[1]+1)+" "+S.menus[p[1]].name+": "+p[2]+" bahan sama")));
+  const u=S.bahan.filter(b=>b.menus.length===1).map(b=>b.name);
+  $("#unik").textContent=u.length?u.join(", ")+".":"Tidak ada.";
+}
+function drawSim(){
+  const out=$("#hasil"),sel=$("#pilih");
+  sel.value=S.habis||"";
+  if(!S.habis){out.className="";out.textContent="Pilih bahan di daftar ini, di graf, atau di peringkat.";return}
+  const b=S.bahan.find(x=>x.key===S.habis),n=S.menus.length;
+  const gagal=b.menus.map(i=>"M"+(i+1)+" "+S.menus[i].name);
+  out.className="bad";
+  out.textContent=b.name+" habis: "+b.menus.length+" dari "+n+" menu gagal ("+Math.round(b.menus.length/n*100)+"%). Menu yang gagal: "+gagal.join(", ")+".";
+}
+function drawSelect(){
+  const sel=$("#pilih");sel.innerHTML="";
+  sel.appendChild(h("option",{value:""},"(pilih bahan)"));
+  S.bahan.forEach(b=>sel.appendChild(h("option",{value:b.key},b.name+" ("+b.menus.length+" menu)")));
+}
+function pick(key){S.habis=key;drawGraph();drawRank();drawSim()}
+function hitung(){
+  const r=parse($("#data").value),pesan=$("#pesan");
+  if(r.errors.length){pesan.textContent=r.errors.join(" ");return}
+  if(r.menus.length<2){pesan.textContent="Isi minimal 2 menu agar grafnya bisa dibandingkan.";return}
+  pesan.textContent="";
+  S={menus:r.menus,bahan:build(r.menus),habis:null};
+  drawStats();drawSelect();drawGraph();drawRank();drawMirip();drawSim();
+}
+$("#hitung").addEventListener("click",hitung);
+$("#contoh").addEventListener("click",()=>{$("#data").value=SAMPLE;hitung()});
+$("#pilih").addEventListener("change",e=>pick(e.target.value||null));
+$("#data").value=SAMPLE;hitung();
+</script>
+</body>
+</html>
